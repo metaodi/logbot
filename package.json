@@ -1,0 +1,41 @@
+{
+  "name": "logbot",
+  "version": "1.0.0",
+  "description": "A slack bot to log/stash stuff on your mind",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/metaodi/logbot"
+  },
+  "keywords": [
+    "slack",
+    "bot",
+    "logbot",
+    "stash"
+  ],
+  "author": "Stefan Oderbolz <odi@metaodi.ch> (http://metaodi.ch/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/metaodi/logbot/issues"
+  },
+  "homepage": "https://github.com/metaodi/logbot",
+  "dependencies": {
+    "botkit": "0.0.5",
+    "botkit": "0.0.5",
+    "botkit-storage-mongo": "^1.0.2",
+    "mongodb": "^1.4.39"
+  },
+  "devDependencies": {
+    "gulp": "^3.8.10",
+    "gulp-jscs": "^3.0.2",
+    "gulp-jshint": "^2.0.0",
+    "gulp-util": "^3.0.1",
+    "jshint-stylish": "^2.1.0",
+    "mocha": "~2.3.4",
+    "should": "~8.1.1"
+  }
+}
