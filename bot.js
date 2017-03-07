@@ -71,9 +71,7 @@ controller.setupWebserver(process.env.PORT, function (err, webserver) {
 });
 
 
-// jshint maxcomplexity:10
 controller.on('slash_command', function (slashCommand, message) {
-
     switch (message.command) {
         case "/log": //handle the `/log` slash command. 
             // but first, let's make sure the token matches!
@@ -81,48 +79,44 @@ controller.on('slash_command', function (slashCommand, message) {
                 return; //just ignore it.
             }
 
-            // if no text was supplied, treat it as a help command
-            if (message.text === "" || message.text === "help") {
-                slashCommand.replyPrivate(message,
-                    "I log/save messages, you can list messages using `/log list`. " +
-                    "Type /log pop to remove last message, /log clear clears all messages " +
-                    "Try typing `/log entry` to see.");
-                return;
-            }
+            var commands = {
+                '': {
+                    'type': 'log',
+                    'fn': log_help,
+                },
+                'help': {
+                    'type': 'log',
+                    'fn': log_help,
+                },
+                'list taxi': {
+                    'type': 'taxi',
+                    'fn': log_list,
+                },
+                'list': {
+                    'type': 'log',
+                    'fn': log_list,
+                },
+                'pop taxi': {
+                    'type': 'taxi',
+                    'fn': log_pop,
+                },
+                'pop': {
+                    'type': 'log',
+                    'fn': log_pop,
+                },
+                'clear taxi': {
+                    'type': 'taxi',
+                    'fn': log_clear,
+                },
+                'clear': {
+                    'type': 'log',
+                    'fn': log_clear,
+                },
+            };
 
-            // if 'list' was supplied, list all saved taxi messages of the user
-            if (message.text === 'list taxi') {
-                log_list(slashCommand, message, 'taxi');
-                return;
-            }
-
-            // if 'list' was supplied, list all saved messages of the user
-            if (message.text === 'list') {
-                log_list(slashCommand, message, 'log');
-                return;
-            }
-
-            // if 'pop' was supplied, delete the last taxi message
-            if (message.text === 'pop taxi') {
-                log_pop(slashCommand, message, 'taxi');
-                return;
-            }
-
-            // if 'pop' was supplied, delete the last log message
-            if (message.text === 'pop') {
-                log_pop(slashCommand, message, 'log');
-                return;
-            }
-
-            // if 'clear taxi' was supplied, delete all taxi messages of user
-            if (message.text === 'clear taxi') {
-                log_clear(slashCommand, message, 'taxi');
-                return;
-            }
-             
-            // if 'clear' was supplied, delete all log messages of user
-            if (message.text === 'clear') {
-                log_clear(slashCommand, message, 'log');
+            var cmd = commands[message.text];
+            if (cmd) {
+                cmd.fn(slashCommand, message, cmd.type);
                 return;
             }
 
@@ -133,6 +127,13 @@ controller.on('slash_command', function (slashCommand, message) {
             slashCommand.replyPublic(message, "I'm afraid I don't know how to " + message.command + " yet.");
     }
 });
+
+function log_help(slashCommand, message) {
+    slashCommand.replyPrivate(message,
+        "I log/save messages, you can list messages using `/log list`. " +
+        "Type /log pop to remove last message, /log clear clears all messages " +
+        "Try typing `/log entry` to see.");
+}
 
 function log_list(slashCommand, message, type) {
     db.logs.find({$query: {'user': message.user, 'type': type}, $orderby: {'_id': 1}}, function (err, docs) {
