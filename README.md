@@ -16,3 +16,8 @@ To run the bot locally and expose it to the internet, use `localtunnel`:
 ```
 lt --port 8765 --subdomain logbotcmd
 ```
+
+
+## Credits
+
+Logo: [LOG File by Hea Poh Lin](https://thenounproject.com/term/log-file/896964/) from the Noun Project (CC-BY)
