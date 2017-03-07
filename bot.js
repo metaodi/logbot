@@ -130,9 +130,9 @@ controller.on('slash_command', function (slashCommand, message) {
 
 function log_help(slashCommand, message) {
     slashCommand.replyPrivate(message,
-        "I log/save messages, you can list messages using `/log list`. " +
-        "Type /log pop to remove last message, /log clear clears all messages " +
-        "Try typing `/log entry` to see.");
+        "I log/save messages, you can list messages using `/log list`.\n" +
+        "Type `/log pop` to remove and retrieve the last message, `/log clear` clears all messages.\n" +
+        "Try typing `/log entry` to add a new entry to the list.");
 }
 
 function log_list(slashCommand, message, type) {
