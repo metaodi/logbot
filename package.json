@@ -25,9 +25,10 @@
   "homepage": "https://github.com/metaodi/logbot",
   "dependencies": {
     "botkit": "0.0.5",
-    "botkit": "0.0.5",
     "botkit-storage-mongo": "^1.0.2",
-    "mongodb": "^1.4.39"
+    "lodash": "^4.17.4",
+    "mongodb": "^1.4.39",
+    "mongojs": "^2.4.0"
   },
   "devDependencies": {
     "gulp": "^3.8.10",

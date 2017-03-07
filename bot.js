@@ -1,4 +1,7 @@
 var Botkit = require('botkit');
+var BotkitStorage = require('botkit-storage-mongo');
+var mongojs = require('mongojs');
+var _ = require('lodash');
 
 if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET || !process.env.PORT || !process.env.VERIFICATION_TOKEN) {
     console.log('Error: Specify CLIENT_ID, CLIENT_SECRET, VERIFICATION_TOKEN and PORT in environment');
@@ -7,15 +10,24 @@ if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET || !process.env.PORT ||
 
 var config = {}
 if (process.env.MONGOLAB_URI) {
-    var BotkitStorage = require('botkit-storage-mongo');
     config = {
         storage: BotkitStorage({mongoUri: process.env.MONGOLAB_URI}),
     };
 } else {
     config = {
-        json_file_store: './db_slackbutton_slash_command/',
+        json_file_store: './logbot_storage/',
     };
 }
+ 
+// db for logs
+var dbUrl = process.env.MONGOLAB_URI || 'mongodb://localhost/logbot',
+    coll = [ 'logs' ],
+    db = mongojs(dbUrl, coll);
+
+db.on('error', function(err) {
+    console.log('database error', err);
+});
+console.log('db connected', dbUrl);
 
 var controller = Botkit.slackbot(config).configureSlackApp(
     {
@@ -35,41 +47,114 @@ controller.setupWebserver(process.env.PORT, function (err, webserver) {
             res.send('Success!');
         }
     });
+
+    // add API to get logs of user
+    webserver.get('/logs', function (req, res) {
+          res.send('Hello World!')
+    })
 });
 
 
 controller.on('slash_command', function (slashCommand, message) {
 
     switch (message.command) {
-        case "/echo": //handle the `/echo` slash command. We might have others assigned to this app too!
-            // The rules are simple: If there is no text following the command, treat it as though they had requested "help"
-            // Otherwise just echo back to them what they sent us.
-
+        case "/log": //handle the `/log` slash command. 
             // but first, let's make sure the token matches!
             if (message.token !== process.env.VERIFICATION_TOKEN) return; //just ignore it.
 
             // if no text was supplied, treat it as a help command
             if (message.text === "" || message.text === "help") {
                 slashCommand.replyPrivate(message,
-                    "I echo back what you tell me. " +
-                    "Try typing `/echo hello` to see.");
+                    "I log/save messages, you can list messages using `/log list`. " +
+                    "Type /log pop to remove last message, /log clear clears all messages " +
+                    "Try typing `/log entry` to see.");
                 return;
             }
 
-            // If we made it here, just echo what the user typed back at them
-            //TODO You do it!
-            slashCommand.replyPublic(message, "1", function() {
-                slashCommand.replyPublicDelayed(message, "2", function() { 
-                    slashCommand.replyPublicDelayed(message, "3");
-                    slashCommand.replyPublicDelayed(message, message.text);
-                });
-            });
+            // if 'list' was supplied, list all saved messages of the user
+            if (message.text === 'list') {
+                db.logs.find({$query: {'user': message.user}, $orderby: {'_id': 1}}, function (err, docs) {
+                    if (err) {
+                        slashCommand.replyPrivate(message, "An error ocurred while retrieving your messages: " + err);
+                        return;
+                    }
+                    if (docs.length === 0) {
+                        slashCommand.replyPrivate(message, "No message found.");
+                        return;
+                    }
 
+                    slashCommand.replyPrivateDelayed(message, "All logged messages:", function() {
+                        var returnMsg = '';
+                        _.each(docs, function(doc) {
+                            returnMsg += " - " + doc.message + "\n";
+                        });
+                        slashCommand.replyPrivate(message, returnMsg);
+                    });
+                })
+                return;
+            }
+
+            // if 'pop' was supplied, delete the last message
+            if (message.text === 'pop') {
+                db.logs.find({'user': message.user}).sort({"_id": -1}).limit(1, function(err, docs) {
+                    if (docs.length === 0) {
+                        slashCommand.replyPrivate(message, "No message found.");
+                        return;
+                    }
+                    var latest = docs[0];
+                    var poppedMsg = latest.message;
+
+                    db.logs.remove({_id: {$eq: latest._id}}, function(err) {
+                        if (err) {
+                            slashCommand.replyPrivate(message, "An error ocurred while removing latest message: " + err);
+                            return;
+                        }
+                    });
+                    slashCommand.replyPrivate(message, "Message popped: " + poppedMsg)
+                });
+
+                return;
+            }
+            // if 'clear' was supplied, delete all messages of user
+            if (message.text === 'clear') {
+                var docs = db.logs.find({$query: {'user': message.user}, $orderby: {_id: -1}}, function(err, docs) {
+                    if (err) {
+                        slashCommand.replyPrivate(message, "An error ocurred while querying your messages: " + err);
+                    }
+                    var ids = _.map(docs, function(doc) { return doc._id; });
+                    db.logs.remove({_id: {$in: ids}}, function(err) {
+                        if (err) {
+                            slashCommand.replyPrivate(message, "An error ocurred while removing messages: " + err);
+                            return;
+                        }
+                        slashCommand.replyPrivate(message, "All messages cleared")
+                    })
+                });
+                return;
+            }
+            
+
+            var doc = {
+                user: message.user,
+                type: 'log',
+                log_date: (new Date()).toJSON(),
+                message: message.text
+            }
+
+            if (message.text.startsWith("taxi")) {
+                doc.type = 'taxi';
+                doc.message = doc.message.substring(("taxi".length)+1);
+            }
+
+            db.logs.insert(doc, function(err) {
+                if (err) {
+                    slashCommand.replyPrivate(message, "An error ocurred when saving your message: " + err);
+                } else {
+                    slashCommand.replyPrivate(message, "Your message was successfully saved: " + doc.message);
+                }
+            });
             break;
         default:
             slashCommand.replyPublic(message, "I'm afraid I don't know how to " + message.command + " yet.");
-
     }
-
-})
-;
+});
