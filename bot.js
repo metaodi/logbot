@@ -9,9 +9,9 @@ if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET || !process.env.PORT ||
 }
 
 var config = {};
-if (process.env.MONGOLAB_URI) {
+if (process.env.MONGODB_URI) {
     config = {
-        storage: BotkitStorage({mongoUri: process.env.MONGOLAB_URI}),
+        storage: BotkitStorage({mongoUri: process.env.MONGODB_URI}),
     };
 } else {
     config = {
@@ -20,7 +20,7 @@ if (process.env.MONGOLAB_URI) {
 }
  
 // db for logs
-var dbUrl = process.env.MONGOLAB_URI || 'mongodb://localhost/logbot',
+var dbUrl = process.env.MONGODB_URI || 'mongodb://localhost/logbot',
     coll = [ 'logs' ],
     db = mongojs(dbUrl, coll);
 
