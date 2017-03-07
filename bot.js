@@ -55,36 +55,39 @@ controller.setupWebserver(process.env.PORT, function (err, webserver) {
         Slack.auth.test({'token': req.body.token},
             function(err, authData) {
                 if (err) {
-                    res.status(500).send('ERROR: ' + err);
-                } else {
-                    var type = req.query.type || 'taxi';
-                    var startDate = Moment(req.query.startDate) || null;
-                    var endDate = Moment(req.query.endDate) || null;
-
-                    var query = {'user': authData.user_id, 'type': type};
-
-                    if (startDate || endDate) {
-                        query.log_date = {};
-                        if (startDate && startDate.isValid()) {
-                            query.log_date.$gte = startDate.toDate();
-                        }
-
-                        if (endDate && endDate.isValid()) {
-                            query.log_date.$lte = endDate.toDate();
-                        }
-                    }
-
-                    db.logs.find({$query: query}, function (err, docs) {
-                        if (err) {
-                            res.status(500).json({"ok": false, "result": [], "error": 'ERROR: ' + err});
-                            return;
-                        }
-                        res.json({"ok": true, "result": docs});
-                    });
+                    res.status(500).json({"ok": false, "result": [], "error": 'ERROR: ' + err});
+                    return;
                 }
+
+                var query = getQuery(authData, req);
+                db.logs.find({$query: query}, function (err, docs) {
+                    if (err) {
+                        res.status(500).json({"ok": false, "result": [], "error": 'ERROR: ' + err});
+                        return;
+                    }
+                    res.json({"ok": true, "result": docs});
+                });
         });
     });
 });
+
+function getQuery(authData, req) {
+    var type = req.query.type || 'taxi';
+    var startDate = Moment(req.query.startDate);
+    var endDate = Moment(req.query.endDate);
+
+    var query = {'user': authData.user_id, 'type': type};
+    query.log_date = {};
+    if (startDate.isValid()) {
+        query.log_date.$gte = startDate.toDate();
+    }
+
+    if (endDate.isValid()) {
+        query.log_date.$lte = endDate.toDate();
+    }
+
+    return query;
+}
 
 
 controller.on('slash_command', function (slashCommand, message) {
