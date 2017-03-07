@@ -1,6 +1,7 @@
 var Botkit = require('botkit');
 var BotkitStorage = require('botkit-storage-mongo');
 var Moment = require('moment-timezone');
+var Slack = require('slack-api');
 var mongojs = require('mongojs');
 var _ = require('lodash');
 
@@ -50,8 +51,22 @@ controller.setupWebserver(process.env.PORT, function (err, webserver) {
     });
 
     // add API to get logs of user
-    webserver.get('/logs', function (req, res) {
-          res.send('Hello World!');
+    webserver.post('/logs', function (req, res) {
+        Slack.auth.test({'token': req.body.token},
+            function(err, authData) {
+                if (err) {
+                    res.status(500).send('ERROR: ' + err);
+                } else {
+                    var type = req.query.type || 'taxi';
+                    db.logs.find({$query: {'user': authData.user_id, 'type': type}}, function (err, docs) {
+                        if (err) {
+                            res.status(500).json({"ok": false, "result": [], "error": 'ERROR: ' + err});
+                            return;
+                        }
+                        res.json({"ok": true, "result": docs});
+                    });
+                }
+        });
     });
 });
 

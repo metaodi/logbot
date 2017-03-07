@@ -29,7 +29,8 @@
     "lodash": "^4.17.4",
     "moment-timezone": "^0.5.11",
     "mongodb": "^1.4.39",
-    "mongojs": "^2.4.0"
+    "mongojs": "^2.4.0",
+    "slack-api": "^0.1.12"
   },
   "devDependencies": {
     "gulp": "^3.8.10",
