@@ -58,7 +58,23 @@ controller.setupWebserver(process.env.PORT, function (err, webserver) {
                     res.status(500).send('ERROR: ' + err);
                 } else {
                     var type = req.query.type || 'taxi';
-                    db.logs.find({$query: {'user': authData.user_id, 'type': type}}, function (err, docs) {
+                    var startDate = Moment(req.query.startDate) || null;
+                    var endDate = Moment(req.query.endDate) || null;
+
+                    var query = {'user': authData.user_id, 'type': type};
+
+                    if (startDate || endDate) {
+                        query.log_date = {};
+                        if (startDate && startDate.isValid()) {
+                            query.log_date.$gte = startDate.toDate();
+                        }
+
+                        if (endDate && endDate.isValid()) {
+                            query.log_date.$lte = endDate.toDate();
+                        }
+                    }
+
+                    db.logs.find({$query: query}, function (err, docs) {
                         if (err) {
                             res.status(500).json({"ok": false, "result": [], "error": 'ERROR: ' + err});
                             return;
@@ -196,7 +212,7 @@ function log_insert(slashCommand, message) {
     var doc = {
         user: message.user,
         type: 'log',
-        log_date: (new Date()).toJSON(),
+        log_date: new Date(),
         message: message.text
     };
 
