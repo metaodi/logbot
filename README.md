@@ -3,6 +3,8 @@
 Logbot
 =======
 
+![Logbot Logo](https://github.com/metaodi/logbot/raw/master/log_logo_small.png "Logbot Logo")
+
 Logbot is a slackbot to log/stash whatever is on your mind while using slack.
 It let's you later retrieve this messages, along with the time when you saves them.
 
