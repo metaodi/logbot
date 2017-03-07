@@ -75,9 +75,15 @@ controller.on('slash_command', function (slashCommand, message) {
                 return;
             }
 
+            // if 'list' was supplied, list all saved taxi messages of the user
+            if (message.text === 'list taxi') {
+                log_list(slashCommand, message, 'taxi');
+                return;
+            }
+
             // if 'list' was supplied, list all saved messages of the user
             if (message.text === 'list') {
-                log_list(slashCommand, message);
+                log_list(slashCommand, message, 'log');
                 return;
             }
 
@@ -100,8 +106,8 @@ controller.on('slash_command', function (slashCommand, message) {
     }
 });
 
-function log_list(slashCommand, message) {
-    db.logs.find({$query: {'user': message.user}, $orderby: {'_id': 1}}, function (err, docs) {
+function log_list(slashCommand, message, type) {
+    db.logs.find({$query: {'user': message.user, 'type': type}, $orderby: {'_id': 1}}, function (err, docs) {
         if (err) {
             slashCommand.replyPrivate(message, "An error ocurred while retrieving your messages: " + err);
             return;
