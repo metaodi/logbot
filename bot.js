@@ -102,14 +102,27 @@ controller.on('slash_command', function (slashCommand, message) {
                 return;
             }
 
-            // if 'pop' was supplied, delete the last message
-            if (message.text === 'pop') {
-                log_pop(slashCommand, message);
+            // if 'pop' was supplied, delete the last taxi message
+            if (message.text === 'pop taxi') {
+                log_pop(slashCommand, message, 'taxi');
                 return;
             }
-            // if 'clear' was supplied, delete all messages of user
+
+            // if 'pop' was supplied, delete the last log message
+            if (message.text === 'pop') {
+                log_pop(slashCommand, message, 'log');
+                return;
+            }
+
+            // if 'clear taxi' was supplied, delete all taxi messages of user
+            if (message.text === 'clear taxi') {
+                log_clear(slashCommand, message, 'taxi');
+                return;
+            }
+             
+            // if 'clear' was supplied, delete all log messages of user
             if (message.text === 'clear') {
-                log_clear(slashCommand, message);
+                log_clear(slashCommand, message, 'log');
                 return;
             }
 
@@ -143,8 +156,8 @@ function log_list(slashCommand, message, type) {
     });
 }
 
-function log_pop(slashCommand, message) {
-    db.logs.find({'user': message.user}).sort({"_id": -1}).limit(1, function(err, docs) {
+function log_pop(slashCommand, message, type) {
+    db.logs.find({'user': message.user, 'type': type}).sort({"_id": -1}).limit(1, function(err, docs) {
         if (docs.length === 0) {
             slashCommand.replyPrivate(message, "No message found.");
             return;
@@ -162,8 +175,8 @@ function log_pop(slashCommand, message) {
     });
 }
 
-function log_clear(slashCommand, message) {
-    var docs = db.logs.find({$query: {'user': message.user}, $orderby: {_id: -1}}, function(err, docs) {
+function log_clear(slashCommand, message, type) {
+    var docs = db.logs.find({$query: {'user': message.user, 'type': type}, $orderby: {_id: -1}}, function(err, docs) {
         if (err) {
             slashCommand.replyPrivate(message, "An error ocurred while querying your messages: " + err);
         }
