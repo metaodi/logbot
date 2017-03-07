@@ -8,7 +8,7 @@ if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET || !process.env.PORT ||
     process.exit(1);
 }
 
-var config = {}
+var config = {};
 if (process.env.MONGOLAB_URI) {
     config = {
         storage: BotkitStorage({mongoUri: process.env.MONGOLAB_URI}),
@@ -50,17 +50,20 @@ controller.setupWebserver(process.env.PORT, function (err, webserver) {
 
     // add API to get logs of user
     webserver.get('/logs', function (req, res) {
-          res.send('Hello World!')
-    })
+          res.send('Hello World!');
+    });
 });
 
 
+// jshint maxcomplexity:10
 controller.on('slash_command', function (slashCommand, message) {
 
     switch (message.command) {
         case "/log": //handle the `/log` slash command. 
             // but first, let's make sure the token matches!
-            if (message.token !== process.env.VERIFICATION_TOKEN) return; //just ignore it.
+            if (message.token !== process.env.VERIFICATION_TOKEN) {
+                return; //just ignore it.
+            }
 
             // if no text was supplied, treat it as a help command
             if (message.text === "" || message.text === "help") {
@@ -73,88 +76,103 @@ controller.on('slash_command', function (slashCommand, message) {
 
             // if 'list' was supplied, list all saved messages of the user
             if (message.text === 'list') {
-                db.logs.find({$query: {'user': message.user}, $orderby: {'_id': 1}}, function (err, docs) {
-                    if (err) {
-                        slashCommand.replyPrivate(message, "An error ocurred while retrieving your messages: " + err);
-                        return;
-                    }
-                    if (docs.length === 0) {
-                        slashCommand.replyPrivate(message, "No message found.");
-                        return;
-                    }
-
-                    slashCommand.replyPrivateDelayed(message, "All logged messages:", function() {
-                        var returnMsg = '';
-                        _.each(docs, function(doc) {
-                            returnMsg += " - " + doc.message + "\n";
-                        });
-                        slashCommand.replyPrivate(message, returnMsg);
-                    });
-                })
+                log_list(slashCommand, message);
                 return;
             }
 
             // if 'pop' was supplied, delete the last message
             if (message.text === 'pop') {
-                db.logs.find({'user': message.user}).sort({"_id": -1}).limit(1, function(err, docs) {
-                    if (docs.length === 0) {
-                        slashCommand.replyPrivate(message, "No message found.");
-                        return;
-                    }
-                    var latest = docs[0];
-                    var poppedMsg = latest.message;
-
-                    db.logs.remove({_id: {$eq: latest._id}}, function(err) {
-                        if (err) {
-                            slashCommand.replyPrivate(message, "An error ocurred while removing latest message: " + err);
-                            return;
-                        }
-                    });
-                    slashCommand.replyPrivate(message, "Message popped: " + poppedMsg)
-                });
-
+                log_pop(slashCommand, message);
                 return;
             }
             // if 'clear' was supplied, delete all messages of user
             if (message.text === 'clear') {
-                var docs = db.logs.find({$query: {'user': message.user}, $orderby: {_id: -1}}, function(err, docs) {
-                    if (err) {
-                        slashCommand.replyPrivate(message, "An error ocurred while querying your messages: " + err);
-                    }
-                    var ids = _.map(docs, function(doc) { return doc._id; });
-                    db.logs.remove({_id: {$in: ids}}, function(err) {
-                        if (err) {
-                            slashCommand.replyPrivate(message, "An error ocurred while removing messages: " + err);
-                            return;
-                        }
-                        slashCommand.replyPrivate(message, "All messages cleared")
-                    })
-                });
+                log_clear(slashCommand, message);
                 return;
             }
-            
 
-            var doc = {
-                user: message.user,
-                type: 'log',
-                log_date: (new Date()).toJSON(),
-                message: message.text
-            }
+            log_insert(slashCommand, message);
 
-            if (message.text.startsWith("taxi")) {
-                doc.type = 'taxi';
-                doc.message = doc.message.substring(("taxi".length)+1);
-            }
-
-            db.logs.insert(doc, function(err) {
-                if (err) {
-                    slashCommand.replyPrivate(message, "An error ocurred when saving your message: " + err);
-                } else {
-                    slashCommand.replyPrivate(message, "Your message was successfully saved: " + doc.message);
-                }
-            });
             break;
         default:
             slashCommand.replyPublic(message, "I'm afraid I don't know how to " + message.command + " yet.");
     }
 });
+
+function log_list(slashCommand, message) {
+    db.logs.find({$query: {'user': message.user}, $orderby: {'_id': 1}}, function (err, docs) {
+        if (err) {
+            slashCommand.replyPrivate(message, "An error ocurred while retrieving your messages: " + err);
+            return;
+        }
+        if (docs.length === 0) {
+            slashCommand.replyPrivate(message, "No message found.");
+            return;
+        }
+
+        slashCommand.replyPrivateDelayed(message, "All logged messages:", function() {
+            var returnMsg = '';
+            _.each(docs, function(doc) {
+                returnMsg += " - " + doc.message + "\n";
+            });
+            slashCommand.replyPrivate(message, returnMsg);
+        });
+    });
+}
+
+function log_pop(slashCommand, message) {
+    db.logs.find({'user': message.user}).sort({"_id": -1}).limit(1, function(err, docs) {
+        if (docs.length === 0) {
+            slashCommand.replyPrivate(message, "No message found.");
+            return;
+        }
+        var latest = docs[0];
+        var poppedMsg = latest.message;
+
+        db.logs.remove({_id: {$eq: latest._id}}, function(err) {
+            if (err) {
+                slashCommand.replyPrivate(message, "An error ocurred while removing latest message: " + err);
+                return;
+            }
+        });
+        slashCommand.replyPrivate(message, "Message popped: " + poppedMsg);
+    });
+}
+
+function log_clear(slashCommand, message) {
+    var docs = db.logs.find({$query: {'user': message.user}, $orderby: {_id: -1}}, function(err, docs) {
+        if (err) {
+            slashCommand.replyPrivate(message, "An error ocurred while querying your messages: " + err);
+        }
+        var ids = _.map(docs, function(doc) { return doc._id; });
+        db.logs.remove({_id: {$in: ids}}, function(err) {
+            if (err) {
+                slashCommand.replyPrivate(message, "An error ocurred while removing messages: " + err);
+                return;
+            }
+            slashCommand.replyPrivate(message, "All messages cleared");
+        });
+    });
+}
+
+function log_insert(slashCommand, message) {
+    var doc = {
+        user: message.user,
+        type: 'log',
+        log_date: (new Date()).toJSON(),
+        message: message.text
+    };
+
+    if (message.text.startsWith("taxi")) {
+        doc.type = 'taxi';
+        doc.message = doc.message.substring(("taxi".length)+1);
+    }
+
+    db.logs.insert(doc, function(err) {
+        if (err) {
+            slashCommand.replyPrivate(message, "An error ocurred when saving your message: " + err);
+        } else {
+            slashCommand.replyPrivate(message, "Your message was successfully saved: " + doc.message);
+        }
+    });
+}
