@@ -1,5 +1,6 @@
 var Botkit = require('botkit');
 var BotkitStorage = require('botkit-storage-mongo');
+var Moment = require('moment-timezone');
 var mongojs = require('mongojs');
 var _ = require('lodash');
 
@@ -113,7 +114,8 @@ function log_list(slashCommand, message) {
         slashCommand.replyPrivateDelayed(message, "All logged messages:", function() {
             var returnMsg = '';
             _.each(docs, function(doc) {
-                returnMsg += " - " + doc.message + "\n";
+                var logDate = Moment(doc.log_date).tz('Europe/Zurich');
+                returnMsg += " - " + logDate.format('DD.MM.YYYY HH:mm') + ": " + doc.message + "\n";
             });
             slashCommand.replyPrivate(message, returnMsg);
         });
