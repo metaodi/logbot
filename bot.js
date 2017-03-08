@@ -137,7 +137,7 @@ controller.on('slash_command', function (slashCommand, message) {
         return;
     }
 
-    log_insert(slashCommand, message);
+    log_insert(slashCommand, message, type);
 });
 
 function log_help(slashCommand, message, type) {
@@ -204,18 +204,13 @@ function log_clear(slashCommand, message, type) {
     });
 }
 
-function log_insert(slashCommand, message) {
+function log_insert(slashCommand, message, type) {
     var doc = {
         user: message.user,
-        type: 'log',
+        type: type,
         log_date: new Date(),
         message: message.text
     };
-
-    if (message.text.startsWith("taxi")) {
-        doc.type = 'taxi';
-        doc.message = doc.message.substring(("taxi".length)+1);
-    }
 
     db.logs.insert(doc, function(err) {
         if (err) {
