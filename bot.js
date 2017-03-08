@@ -77,13 +77,17 @@ function getQuery(authData, req) {
     var endDate = Moment(req.query.endDate);
 
     var query = {'user': authData.user_id, 'type': type};
-    query.log_date = {};
-    if (startDate.isValid()) {
-        query.log_date.$gte = startDate.toDate();
-    }
+    if (startDate.isValid() || endDate.isValid()) {
+        query.log_date = {};
+        if (startDate.isValid()) {
+            startDate = startDate.startOf('day').tz('Europe/Zurich');
+            query.log_date.$gte = startDate.toDate();
+        }
 
-    if (endDate.isValid()) {
-        query.log_date.$lte = endDate.toDate();
+        if (endDate.isValid()) {
+            endDate = endDate.endOf('day').tz('Europe/Zurich');
+            query.log_date.$lte = endDate.toDate();
+        }
     }
 
     return query;
