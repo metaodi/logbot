@@ -98,67 +98,53 @@ function getQuery(authData, req) {
 
 
 controller.on('slash_command', function (slashCommand, message) {
+    // first, let's make sure the token matches!
+    if (message.token !== process.env.VERIFICATION_TOKEN) {
+        return; //just ignore it.
+    }
+    var commands = {
+        '': {
+            'fn': log_help,
+        },
+        'help': {
+            'fn': log_help,
+        },
+        'list': {
+            'fn': log_list,
+        },
+        'pop': {
+            'fn': log_pop,
+        },
+        'clear': {
+            'fn': log_clear,
+        },
+    };
+    var type;
     switch (message.command) {
         case "/log": //handle the `/log` slash command. 
-            // but first, let's make sure the token matches!
-            if (message.token !== process.env.VERIFICATION_TOKEN) {
-                return; //just ignore it.
-            }
-
-            var commands = {
-                '': {
-                    'type': 'log',
-                    'fn': log_help,
-                },
-                'help': {
-                    'type': 'log',
-                    'fn': log_help,
-                },
-                'list taxi': {
-                    'type': 'taxi',
-                    'fn': log_list,
-                },
-                'list': {
-                    'type': 'log',
-                    'fn': log_list,
-                },
-                'pop taxi': {
-                    'type': 'taxi',
-                    'fn': log_pop,
-                },
-                'pop': {
-                    'type': 'log',
-                    'fn': log_pop,
-                },
-                'clear taxi': {
-                    'type': 'taxi',
-                    'fn': log_clear,
-                },
-                'clear': {
-                    'type': 'log',
-                    'fn': log_clear,
-                },
-            };
-
-            var cmd = commands[message.text];
-            if (cmd) {
-                cmd.fn(slashCommand, message, cmd.type);
-                return;
-            }
-
-            log_insert(slashCommand, message);
-
+            type = 'log';
+            break;
+        case "/taxi": //handle the `/taxi` slash command. 
+            type = 'taxi';
             break;
         default:
             slashCommand.replyPublic(message, "I'm afraid I don't know how to " + message.command + " yet.");
+            return;
     }
+    var cmd = commands[message.text];
+    if (cmd) {
+        cmd.fn(slashCommand, message, type);
+        return;
+    }
+
+    log_insert(slashCommand, message);
 });
 
-function log_help(slashCommand, message) {
+function log_help(slashCommand, message, type) {
     slashCommand.replyPrivate(message,
-        "I log/save messages, you can list messages using `/log list`.\n" +
-        "Type `/log pop` to remove and retrieve the last message, `/log clear` clears all messages.\n" +
-        "Try typing `/log entry` to add a new entry to the list.");
+        "I save messages, you can list messages using `/" + type + " list`.\n" +
+        "Type `/" + type + " pop` to remove and retrieve the last message, `/" + type + " clear` clears all messages.\n" +
+        "Try typing `/" + type + " entry` to add a new entry to the list.");
 }
 
 function log_list(slashCommand, message, type) {
