@@ -148,7 +148,7 @@ function log_help(slashCommand, message, type) {
     slashCommand.replyPrivate(message,
         "I save messages, you can list messages using `/" + type + " list`.\n" +
         "Type `/" + type + " pop` to remove and retrieve the last message, `/" + type + " clear` clears all messages.\n" +
-        "Try typing `/" + type + " entry` to add a new entry to the list.");
+        "Try typing `/" + type + " <my entry>` to add a new entry to the list.");
 }
 
 function log_list(slashCommand, message, type) {
