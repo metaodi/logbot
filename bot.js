@@ -60,7 +60,10 @@ controller.setupWebserver(process.env.PORT, function (err, webserver) {
                 }
 
                 var query = getQuery(authData, req);
-                var limit = req.query.limit || 1000;
+                var limit = parseInt(req.query.limit);
+                if (_.isNaN(limit)) {
+                    limit = 1000;
+                }
                 db.logs.find({$query: query}).limit(limit, function (err, docs) {
                     if (err) {
                         res.status(500).json({"ok": false, "result": [], "error": 'ERROR: ' + err});
