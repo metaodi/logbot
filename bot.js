@@ -73,17 +73,20 @@ controller.setupWebserver(process.env.PORT, function (err, webserver) {
 
 function getQuery(authData, req) {
     var type = req.query.type || 'taxi';
-    var startDate = Moment(req.query.startDate);
-    var endDate = Moment(req.query.endDate);
+    var startDate = req.query.startDate;
+    var endDate = req.query.endDate;
 
     var query = {'user': authData.user_id, 'type': type};
-    if (startDate.isValid() || endDate.isValid()) {
+    if (startDate || endDate) {
         query.log_date = {};
+
+        startDate = Moment(startDate);
         if (startDate.isValid()) {
             startDate = startDate.startOf('day').tz('Europe/Zurich');
             query.log_date.$gte = startDate.toDate();
         }
 
+        endDate = Moment(endDate);
         if (endDate.isValid()) {
             endDate = endDate.endOf('day').tz('Europe/Zurich');
             query.log_date.$lte = endDate.toDate();
