@@ -5,8 +5,8 @@ var Slack = require('slack-api');
 var mongojs = require('mongojs');
 var _ = require('lodash');
 
-var Log = require('./lib/log');
-var Taxi = require('./lib/taxi');
+var log = require('./lib/log');
+var taxi = require('./lib/taxi');
 
 if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET || !process.env.PORT || !process.env.VERIFICATION_TOKEN) {
     console.log('Error: Specify CLIENT_ID, CLIENT_SECRET, VERIFICATION_TOKEN and PORT in environment');
@@ -112,10 +112,10 @@ controller.on('slash_command', function (slashCommand, message) {
     var command;
     switch (message.command) {
         case "/log": //handle the `/log` slash command. 
-            command = new Log();
+            command = new log.Log();
             break;
         case "/taxi": //handle the `/taxi` slash command. 
-            command = new Taxi();
+            command = new taxi.Taxi();
             break;
         default:
             slashCommand.replyPublic(message, "I'm afraid I don't know how to " + message.command + " yet.");
