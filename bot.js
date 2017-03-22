@@ -5,6 +5,9 @@ var Slack = require('slack-api');
 var mongojs = require('mongojs');
 var _ = require('lodash');
 
+var Log = require('./lib/log');
+var Taxi = require('./lib/taxi');
+
 if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET || !process.env.PORT || !process.env.VERIFICATION_TOKEN) {
     console.log('Error: Specify CLIENT_ID, CLIENT_SECRET, VERIFICATION_TOKEN and PORT in environment');
     process.exit(1);
@@ -106,121 +109,22 @@ controller.on('slash_command', function (slashCommand, message) {
     if (message.token !== process.env.VERIFICATION_TOKEN) {
         return; //just ignore it.
     }
-    var commands = {
-        '': {
-            'fn': log_help,
-        },
-        'help': {
-            'fn': log_help,
-        },
-        'list': {
-            'fn': log_list,
-        },
-        'pop': {
-            'fn': log_pop,
-        },
-        'clear': {
-            'fn': log_clear,
-        },
-    };
-    var type;
+    var command;
     switch (message.command) {
         case "/log": //handle the `/log` slash command. 
-            type = 'log';
+            command = new Log();
             break;
         case "/taxi": //handle the `/taxi` slash command. 
-            type = 'taxi';
+            command = new Taxi();
             break;
         default:
             slashCommand.replyPublic(message, "I'm afraid I don't know how to " + message.command + " yet.");
             return;
     }
-    var cmd = commands[message.text];
-    if (cmd) {
-        cmd.fn(slashCommand, message, type);
+    var result = command.runCommand(message.text, db, slashCommand, message);
+    if (result) {
         return;
     }
 
-    log_insert(slashCommand, message, type);
+    command.insert(db, slashCommand, message);
 });
-
-function log_help(slashCommand, message, type) {
-    slashCommand.replyPrivate(message,
-        "I save messages, you can list messages using `/" + type + " list`.\n" +
-        "Type `/" + type + " pop` to remove and retrieve the last message, `/" + type + " clear` clears all messages.\n" +
-        "Try typing `/" + type + " <my entry>` to add a new entry to the list.");
-}
-
-function log_list(slashCommand, message, type) {
-    db.logs.find({$query: {'user': message.user, 'type': type}, $orderby: {'_id': 1}}, function (err, docs) {
-        if (err) {
-            slashCommand.replyPrivate(message, "An error ocurred while retrieving your messages: " + err);
-            return;
-        }
-        if (docs.length === 0) {
-            slashCommand.replyPrivate(message, "No message found.");
-            return;
-        }
-
-        slashCommand.replyPrivateDelayed(message, "All logged messages:", function() {
-            var returnMsg = '';
-            _.each(docs, function(doc) {
-                var logDate = Moment(doc.log_date).tz('Europe/Zurich');
-                returnMsg += " - " + logDate.format('DD.MM.YYYY HH:mm') + ": " + doc.message + "\n";
-            });
-            slashCommand.replyPrivate(message, returnMsg);
-        });
-    });
-}
-
-function log_pop(slashCommand, message, type) {
-    db.logs.find({'user': message.user, 'type': type}).sort({"_id": -1}).limit(1, function(err, docs) {
-        if (docs.length === 0) {
-            slashCommand.replyPrivate(message, "No message found.");
-            return;
-        }
-        var latest = docs[0];
-        var poppedMsg = latest.message;
-
-        db.logs.remove({_id: {$eq: latest._id}}, function(err) {
-            if (err) {
-                slashCommand.replyPrivate(message, "An error ocurred while removing latest message: " + err);
-                return;
-            }
-        });
-        slashCommand.replyPrivate(message, "Message popped: " + poppedMsg);
-    });
-}
-
-function log_clear(slashCommand, message, type) {
-    var docs = db.logs.find({$query: {'user': message.user, 'type': type}, $orderby: {_id: -1}}, function(err, docs) {
-        if (err) {
-            slashCommand.replyPrivate(message, "An error ocurred while querying your messages: " + err);
-        }
-        var ids = _.map(docs, function(doc) { return doc._id; });
-        db.logs.remove({_id: {$in: ids}}, function(err) {
-            if (err) {
-                slashCommand.replyPrivate(message, "An error ocurred while removing messages: " + err);
-                return;
-            }
-            slashCommand.replyPrivate(message, "All messages cleared");
-        });
-    });
-}
-
-function log_insert(slashCommand, message, type) {
-    var doc = {
-        user: message.user,
-        type: type,
-        log_date: new Date(),
-        message: message.text
-    };
-
-    db.logs.insert(doc, function(err) {
-        if (err) {
-            slashCommand.replyPrivate(message, "An error ocurred when saving your message: " + err);
-        } else {
-            slashCommand.replyPrivate(message, "Your message was successfully saved: " + doc.message);
-        }
-    });
-}
